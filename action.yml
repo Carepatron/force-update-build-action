@@ -31,10 +31,8 @@ inputs:
     default: 'FORCE_UPDATE_BUILD_COUNT'
 
 outputs:
-  pull_requests:
-    description: JSON array of pull requests associated with the commit
-  size:
-    description: The number of pull requests associated with the commit
+  force_update_build_count_count:
+    description: The updated force update build count
 
 runs:
   using: node20
