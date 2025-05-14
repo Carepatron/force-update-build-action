@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import { Octokit } from '@octokit/core'
+import { Octokit } from '@octokit/rest'
 
 export async function run() {
   try {
@@ -24,17 +24,12 @@ export async function run() {
 
     // Make request to get pull requests associated with the commit
     core.debug(`Fetching pull requests for commit ${commitSha}...`)
-    const getPullRequestsResponse = await octokit.request(
-      'GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls',
-      {
+    const getPullRequestsResponse =
+      await octokit.rest.repos.listPullRequestsAssociatedWithCommit({
         owner,
         repo,
-        commit_sha: commitSha,
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28'
-        }
-      }
-    )
+        commit_sha: commitSha
+      })
     // Filter pull requests by label
     const pullRequests = getPullRequestsResponse.data.filter((pr) => {
       if (pr.labels.length === 0) {
@@ -43,17 +38,12 @@ export async function run() {
       return Boolean(pr.labels.find((prLabel) => prLabel.name === label))
     })
 
-    const getRepositoryVariableResponse = await octokit.request(
-      'GET /repos/{owner}/{repo}/actions/variables/{name}',
-      {
+    const getRepositoryVariableResponse =
+      await octokit.rest.actions.getRepoVariable({
         owner,
         repo,
-        name: forceUpdateBuildCountName,
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28'
-        }
-      }
-    )
+        name: forceUpdateBuildCountName
+      })
     const forceUpdateBuildCount = getRepositoryVariableResponse.data.value
 
     if (!forceUpdateBuildCount) {
@@ -78,18 +68,12 @@ export async function run() {
       parseInt(forceUpdateBuildCount) + 1
     ).toString()
     // Update the force update build count variable
-    await octokit.request(
-      'PATCH /repos/{owner}/{repo}/actions/variables/{name}',
-      {
-        owner,
-        repo,
-        name: forceUpdateBuildCountName,
-        value: latestForceUpdateBuildCount,
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28'
-        }
-      }
-    )
+    await octokit.rest.actions.updateRepoVariable({
+      owner,
+      repo,
+      name: forceUpdateBuildCountName,
+      value: latestForceUpdateBuildCount
+    })
     core.setOutput('force_update_build_count', latestForceUpdateBuildCount)
   } catch (error) {
     if (error instanceof Error) {
