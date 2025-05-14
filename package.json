@@ -1,17 +1,17 @@
 {
-  "name": "javascript-action",
-  "description": "GitHub Actions JavaScript Template",
+  "name": "force-update-build-action",
+  "description": "Increments force update build repository variable if associated pull request is a force update",
   "version": "0.0.0",
   "author": "",
   "type": "module",
   "private": true,
-  "homepage": "https://github.com/actions/javascript-action#readme",
+  "homepage": "https://github.com/Carepatron/force-update-build-action#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/javascript-action.git"
+    "url": "git@github.com:Carepatron/force-update-build-action.git"
   },
   "bugs": {
-    "url": "https://github.com/actions/javascript-action/issues"
+    "url": "https://github.com/Carepatron/force-update-build-action/issues"
   },
   "keywords": [
     "actions"
