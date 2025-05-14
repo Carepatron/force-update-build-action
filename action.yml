@@ -1,7 +1,7 @@
 name: Force Update Build Action
 description:
-  This action increments the "force update build count" repository variable if
-  the pull requests associated with the commit have a specific label.
+  This action increments force update build repository variable if associated
+  pull request is a force update
 author: Carepatron
 
 branding:
