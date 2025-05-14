@@ -1,23 +1,40 @@
-name: The name of your action here
-description: Provide a description here
-author: Your name or organization here
+name: Force Update Build Action
+description:
+  This action increments the "force update build count" repository variable if
+  the pull requests associated with the commit have a specific label.
+author: Carepatron
 
-# Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: heart
-  color: red
+  icon: git-pull-request
+  color: blue
 
-# Define your inputs here.
 inputs:
-  milliseconds:
-    description: Your input description here
+  commit_sha:
+    description: The commit SHA from the push event
     required: true
-    default: '1000'
+  personal_access_token:
+    description: Personal access token for API access
+    required: true
+  owner:
+    description: The owner of the repository
+    required: true
+  repo:
+    description: The name of the repository
+    required: true
+  label:
+    description: The label to filter pull requests by
+    required: false
+    default: ''
+  force_update_build_count_name:
+    description: The name of the force update build count repository variable
+    required: false
+    default: 'FORCE_UPDATE_BUILD_COUNT'
 
-# Define your outputs here.
 outputs:
-  time:
-    description: Your output description here
+  pull_requests:
+    description: JSON array of pull requests associated with the commit
+  size:
+    description: The number of pull requests associated with the commit
 
 runs:
   using: node20
