@@ -81,7 +81,7 @@ it('should set output to current count when no PRs associated with commit', asyn
   expect(mockOctokitRequest).toHaveBeenCalledTimes(2)
 })
 
-it.skip('should increment count when PRs with label are associated with commit', async () => {
+it('should increment count when PRs with label are associated with commit', async () => {
   // Mock response for get pull requests - with labeled PR
   mockOctokitRequest.mockImplementationOnce(() => {
     return Promise.resolve({
