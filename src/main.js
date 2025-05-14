@@ -56,6 +56,11 @@ export async function run() {
     )
     const forceUpdateBuildCount = getRepositoryVariableResponse.data.value
 
+    if (!forceUpdateBuildCount) {
+      core.setOutput('force_update_build_count', 0)
+      return
+    }
+
     core.debug(
       `Force update build count: ${forceUpdateBuildCount} (from variable ${forceUpdateBuildCountName})`
     )
