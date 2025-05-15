@@ -51,12 +51,14 @@ export async function run() {
 					commit_sha: commitSha
 				})
 			// Filter pull requests by label
-			pullRequests = getPullRequestsResponse.data.filter((pr) => {
-				if (pr.labels.length === 0) {
-					return false
-				}
-				return Boolean(pr.labels.find((prLabel) => prLabel.name === label))
-			})
+			pullRequests = getPullRequestsResponse.data
+				.filter((pr) => !!pr.merged_at) // only merged pull requests
+				.filter((pr) => {
+					if (pr.labels.length === 0) {
+						return false
+					}
+					return Boolean(pr.labels.find((prLabel) => prLabel.name === label))
+				})
 		} catch (err) {
 			if (err instanceof Error) {
 				core.error(err)
