@@ -31056,22 +31056,9 @@ async function run() {
       auth: personalAccessToken
     });
 
-    // Make request to get pull requests associated with the commit
-    coreExports.debug(`Fetching pull requests for commit ${commitSha}...`);
-    const getPullRequestsResponse =
-      await octokit.rest.repos.listPullRequestsAssociatedWithCommit({
-        owner,
-        repo,
-        commit_sha: commitSha
-      });
-    // Filter pull requests by label
-    const pullRequests = getPullRequestsResponse.data.filter((pr) => {
-      if (pr.labels.length === 0) {
-        return false
-      }
-      return Boolean(pr.labels.find((prLabel) => prLabel.name === label))
-    });
-
+    coreExports.debug(
+      `Fetching repository variable with the name ${forceUpdateBuildCountName}...`
+    );
     const getRepositoryVariableResponse =
       await octokit.rest.actions.getRepoVariable({
         owner,
@@ -31085,10 +31072,40 @@ async function run() {
       return
     }
 
-    coreExports.debug(
+    // Make request to get pull requests associated with the commit
+    coreExports.debug(`Fetching pull requests for commit ${commitSha}...`);
+
+    let pullRequests = [];
+
+    try {
+      const getPullRequestsResponse =
+        await octokit.rest.repos.listPullRequestsAssociatedWithCommit({
+          owner,
+          repo,
+          commit_sha: commitSha
+        });
+      // Filter pull requests by label
+      pullRequests = getPullRequestsResponse.data
+        .filter((pr) => !!pr.merged_at) // only merged pull requests
+        .filter((pr) => {
+          if (pr.labels.length === 0) {
+            return false
+          }
+          return Boolean(pr.labels.find((prLabel) => prLabel.name === label))
+        });
+    } catch (err) {
+      if (err instanceof Error) {
+        coreExports.error(err);
+      }
+      // If there's an error when fetching the pull requests, set the `force_update_build_count` output to the current value.
+      coreExports.setOutput('force_update_build_count', forceUpdateBuildCount);
+      return
+    }
+
+    coreExports.info(
       `Force update build count: ${forceUpdateBuildCount} (from variable ${forceUpdateBuildCountName})`
     );
-    coreExports.debug(
+    coreExports.info(
       `Found ${pullRequests.length} pull requests associated with the commit`
     );
 
@@ -31101,21 +31118,29 @@ async function run() {
     const latestForceUpdateBuildCount = (
       parseInt(forceUpdateBuildCount) + 1
     ).toString();
-    // Update the force update build count variable
-    await octokit.rest.actions.updateRepoVariable({
-      owner,
-      repo,
-      name: forceUpdateBuildCountName,
-      value: latestForceUpdateBuildCount
-    });
+
+    try {
+      // Update the force update build count variable
+      await octokit.rest.actions.updateRepoVariable({
+        owner,
+        repo,
+        name: forceUpdateBuildCountName,
+        value: latestForceUpdateBuildCount
+      });
+    } catch {
+      // If there's an error when patching the repository variable, set the `force_update_build_count` output to the current value.
+      coreExports.setOutput('force_update_build_count', forceUpdateBuildCount);
+      return
+    }
+
     coreExports.setOutput('force_update_build_count', latestForceUpdateBuildCount);
   } catch (error) {
     if (error instanceof Error) {
       coreExports.error(error);
     }
-
-    // Avoid failing the workflow run if there is an error occurring in the action. Instead, set output to 0.
-    coreExports.setOutput('force_update_build_count', 0);
+    // If there is an error in request setup, fetching repository variable, or computing the updated force build count,
+    // then set the ouput to `NaN`.
+    coreExports.setOutput('force_update_build_count', NaN);
   }
 }
 
