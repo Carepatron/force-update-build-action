@@ -61,10 +61,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           owner: ${{ github.repository_owner }}
           repo: ${{ github.event.repository.name }}
-          # Optional: Filter PRs by label
           label: 'force-update'
-          # Optional: Process all PRs regardless of merge status
-          # skip_merged_pr_check: 'true'
+          skip_merged_pr_check: 'true'
 
       - name: Print Output
         id: output
