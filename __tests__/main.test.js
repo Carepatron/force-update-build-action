@@ -1,4 +1,3 @@
-/* eslint-disable jest/no-disabled-tests */
 /**
  * Unit tests for the action's main functionality, src/main.js
  *
@@ -11,8 +10,9 @@ import * as core from '../__fixtures__/core.js'
 
 // Mock for Octokit REST API methods
 const mockListPullRequestsAssociatedWithCommit = jest.fn()
-const mockGetRepoVariable = jest.fn()
-const mockUpdateRepoVariable = jest.fn()
+
+// Mock for global fetch
+global.fetch = jest.fn()
 
 // Create mock Octokit client
 const mockOctokit = {
@@ -20,16 +20,18 @@ const mockOctokit = {
     repos: {
       listPullRequestsAssociatedWithCommit:
         mockListPullRequestsAssociatedWithCommit
-    },
-    actions: {
-      getRepoVariable: mockGetRepoVariable,
-      updateRepoVariable: mockUpdateRepoVariable
     }
   }
 }
 
 // Mock Octokit constructor
 const MockOctokit = jest.fn().mockImplementation(() => mockOctokit)
+
+// Mock fetch Response
+const mockResponse = {
+  ok: true,
+  json: jest.fn()
+}
 
 // Mocks should be declared before the module being tested is imported.
 jest.unstable_mockModule('@actions/core', () => core)
@@ -45,23 +47,33 @@ const { run } = await import('../src/main.js')
 
 const mockInputs = {
   commit_sha: 'abc123',
-  personal_access_token: 'token123',
+  github_token: 'token123',
   owner: 'carepatron',
   repo: 'test-repo',
-  label: 'force-update',
-  force_update_build_count_name: 'FORCE_UPDATE_BUILD_COUNT'
+  label: 'force-update'
+}
+
+const mockVersion = {
+  forceUpdateBuildCount: 42
 }
 
 beforeEach(() => {
   // Set the action's inputs as return values from core.getInput().
   core.getInput.mockImplementation((name) => mockInputs[name])
+  // Reset fetch mock
+  global.fetch.mockReset()
+  // Default response for version.json
+  global.fetch.mockResolvedValue({
+    ...mockResponse,
+    json: jest.fn().mockResolvedValue(mockVersion)
+  })
 })
 
 afterEach(() => {
   jest.resetAllMocks()
 })
 
-it('should increment count when PRs with label are associated with commit', async () => {
+it('should increment count when PR with label are associated with commit', async () => {
   // Mock response for list pull requests - with labeled PR
   mockListPullRequestsAssociatedWithCommit.mockResolvedValue({
     data: [
@@ -73,39 +85,23 @@ it('should increment count when PRs with label are associated with commit', asyn
     ]
   })
 
-  // Mock response for get repository variable
-  mockGetRepoVariable.mockResolvedValue({
-    data: {
-      value: '42'
-    }
-  })
-
-  // Mock response for update repository variable
-  mockUpdateRepoVariable.mockResolvedValue({
-    status: 204
-  })
-
   await run()
+
+  // Verify that fetch was called with the correct URL
+  expect(global.fetch).toHaveBeenCalledWith(
+    'https://app.carepatron.com/version.json',
+    expect.any(Object)
+  )
 
   // Verify the output was set to incremented count
   expect(core.setOutput).toHaveBeenNthCalledWith(
     1,
     'force_update_build_count',
-    '43'
-  )
-
-  // Verify that the update variable endpoint was called with correct value
-  expect(mockUpdateRepoVariable).toHaveBeenCalledWith(
-    expect.objectContaining({
-      owner: 'carepatron',
-      repo: 'test-repo',
-      name: 'FORCE_UPDATE_BUILD_COUNT',
-      value: '43'
-    })
+    mockVersion.forceUpdateBuildCount + 1
   )
 })
 
-it.skip('should not increment count for PRs without the specified label', async () => {
+it('should not increment count for PRs without the specified label', async () => {
   // Mock response for list pull requests - with PR but wrong label
   mockListPullRequestsAssociatedWithCommit.mockResolvedValue({
     data: [
@@ -117,37 +113,20 @@ it.skip('should not increment count for PRs without the specified label', async 
     ]
   })
 
-  // Mock response for get repository variable
-  mockGetRepoVariable.mockResolvedValue({
-    data: {
-      value: '42'
-    }
-  })
-
   await run()
 
   // Verify the output was set to original count (not incremented)
   expect(core.setOutput).toHaveBeenNthCalledWith(
     1,
     'force_update_build_count',
-    '42'
+    mockVersion.forceUpdateBuildCount
   )
-
-  // Verify that the update variable endpoint was not called
-  expect(mockUpdateRepoVariable).not.toHaveBeenCalled()
 })
 
-it.skip('should set the output to current count when no PRs associated with commit', async () => {
+it('should set the output to current count when no PRs associated with commit', async () => {
   // Mock response for list pull requests - empty array
   mockListPullRequestsAssociatedWithCommit.mockResolvedValue({
     data: []
-  })
-
-  // Mock response for get repository variable
-  mockGetRepoVariable.mockResolvedValue({
-    data: {
-      value: '42'
-    }
   })
 
   await run()
@@ -156,33 +135,62 @@ it.skip('should set the output to current count when no PRs associated with comm
   expect(core.setOutput).toHaveBeenNthCalledWith(
     1,
     'force_update_build_count',
-    '42'
+    mockVersion.forceUpdateBuildCount
+  )
+})
+
+it('should set the output to current forceUpdateBuildCount of 0 when it is not defined in version.json', async () => {
+  // Mock response for version.json without forceUpdateBuildCount
+  global.fetch.mockResolvedValueOnce({
+    ...mockResponse,
+    json: jest.fn().mockResolvedValue({})
+  })
+
+  // Mock response for list pull requests with labeled PR
+  mockListPullRequestsAssociatedWithCommit.mockResolvedValue({
+    data: [
+      {
+        number: 123,
+        labels: [{ name: 'force-update' }],
+        merged_at: '2011-01-26T19:01:12Z'
+      }
+    ]
+  })
+
+  await run()
+
+  // Verify the output was set to 0 when no forceUpdateBuildCount exists
+  expect(core.setOutput).toHaveBeenCalledWith('force_update_build_count', 0)
+})
+
+it('should set the output to NaN when fetch request fails', async () => {
+  // Mock failed fetch
+  global.fetch.mockResolvedValueOnce({
+    ok: false,
+    status: 404
+  })
+
+  await run()
+
+  expect(core.error).toHaveBeenCalled()
+
+  // Verify default output was set
+  expect(core.setOutput).toHaveBeenCalledWith('force_update_build_count', NaN)
+})
+
+it('should set the output to current count when pull request fetch fails', async () => {
+  // Mock error for list pull requests
+  mockListPullRequestsAssociatedWithCommit.mockRejectedValueOnce(
+    new Error('API error')
   )
 
-  // Verify that the update variable endpoint was not called
-  expect(mockUpdateRepoVariable).not.toHaveBeenCalled()
-})
-
-it('should set the output to NaN when repository variable is not found', async () => {
-  // Mock response for get repository variable with falsy value
-  mockGetRepoVariable.mockResolvedValue(new Error('API Error'))
-
   await run()
 
   expect(core.error).toHaveBeenCalled()
 
-  // Verify default output was set
-  expect(core.setOutput).toHaveBeenCalledWith('force_update_build_count', NaN)
-})
-
-it('should set the output to NaN when patching repository variable encounter an error', async () => {
-  // Mock error for list pull requests
-  mockUpdateRepoVariable.mockRejectedValueOnce(new Error('API error'))
-
-  await run()
-
-  expect(core.error).toHaveBeenCalled()
-
-  // Verify default output was set
-  expect(core.setOutput).toHaveBeenCalledWith('force_update_build_count', NaN)
+  // Verify current count is used
+  expect(core.setOutput).toHaveBeenCalledWith(
+    'force_update_build_count',
+    mockVersion.forceUpdateBuildCount
+  )
 })

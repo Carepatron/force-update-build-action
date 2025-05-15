@@ -4,39 +4,47 @@ import { Octokit } from '@octokit/rest'
 export async function run() {
   try {
     const commitSha = core.getInput('commit_sha')
-    const personalAccessToken = core.getInput('personal_access_token')
+    const githubToken = core.getInput('github_token')
     const owner = core.getInput('owner')
     const repo = core.getInput('repo')
     const label = core.getInput('label')
-    const forceUpdateBuildCountName = core.getInput(
-      'force_update_build_count_name'
-    )
 
     core.debug(`Commit SHA: ${commitSha}`)
     core.debug(`Owner: ${owner}`)
     core.debug(`Repo: ${repo}`)
     core.debug(`Label: ${label}`)
-    core.debug(`Force Update Build Count Name: ${forceUpdateBuildCountName}`)
 
     const octokit = new Octokit({
-      auth: personalAccessToken
+      auth: githubToken
     })
 
-    core.debug(
-      `Fetching repository variable with the name ${forceUpdateBuildCountName}...`
-    )
-    const getRepositoryVariableResponse =
-      await octokit.rest.actions.getRepoVariable({
-        owner,
-        repo,
-        name: forceUpdateBuildCountName
-      })
-    const forceUpdateBuildCount = getRepositoryVariableResponse.data.value
+    core.debug(`Fetching Carepatron Main App version.json...`)
 
-    if (!forceUpdateBuildCount) {
-      core.setOutput('force_update_build_count', 0)
-      return
+    const versionJsonResponse = await fetch(
+      'https://app.carepatron.com/version.json',
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          Referer: 'https://app.carepatron.com/'
+        }
+      }
+    )
+
+    if (!versionJsonResponse.ok) {
+      throw new Error(
+        `Error fetching version.json. Status: ${versionJsonResponse.status}`
+      )
     }
+
+    const version = await versionJsonResponse.json()
+
+    const forceUpdateBuildCount =
+      typeof version.forceUpdateBuildCount === 'number'
+        ? version.forceUpdateBuildCount
+        : 0
 
     // Make request to get pull requests associated with the commit
     core.debug(`Fetching pull requests for commit ${commitSha}...`)
@@ -69,9 +77,6 @@ export async function run() {
     }
 
     core.info(
-      `Force update build count: ${forceUpdateBuildCount} (from variable ${forceUpdateBuildCountName})`
-    )
-    core.info(
       `Found ${pullRequests.length} pull requests associated with the commit`
     )
 
@@ -81,23 +86,7 @@ export async function run() {
       return
     }
 
-    const latestForceUpdateBuildCount = (
-      parseInt(forceUpdateBuildCount) + 1
-    ).toString()
-
-    try {
-      // Update the force update build count variable
-      await octokit.rest.actions.updateRepoVariable({
-        owner,
-        repo,
-        name: forceUpdateBuildCountName,
-        value: latestForceUpdateBuildCount
-      })
-    } catch {
-      // If there's an error when patching the repository variable, set the `force_update_build_count` output to the current value.
-      core.setOutput('force_update_build_count', forceUpdateBuildCount)
-      return
-    }
+    const latestForceUpdateBuildCount = forceUpdateBuildCount + 1
 
     core.setOutput('force_update_build_count', latestForceUpdateBuildCount)
   } catch (error) {

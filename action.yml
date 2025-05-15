@@ -1,7 +1,7 @@
 name: Force Update Build Action
 description:
-  This action increments force update build repository variable if associated
-  pull request is a force update
+  This action increments force update build count, based on the Carepatron Main
+  App version.json file, if associated pull request is a force update
 author: Carepatron
 
 branding:
@@ -12,8 +12,8 @@ inputs:
   commit_sha:
     description: The commit SHA from the push event
     required: true
-  personal_access_token:
-    description: Personal access token for API access
+  github_token:
+    description: Github Token
     required: true
   owner:
     description: The owner of the repository
@@ -25,10 +25,6 @@ inputs:
     description: The label to filter pull requests by
     required: false
     default: ''
-  force_update_build_count_name:
-    description: The name of the force update build count repository variable
-    required: false
-    default: 'FORCE_UPDATE_BUILD_COUNT'
 
 outputs:
   force_update_build_count:
