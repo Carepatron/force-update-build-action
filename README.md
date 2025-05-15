@@ -21,6 +21,8 @@ steps:
       repo: ${{ github.event.repository.name }}
       # Optional: Filter PRs by label
       label: 'force-update'
+      # Optional: Process all PRs regardless of merge status
+      # skip_merged_pr_check: 'true'
 
   - name: Use Force Update Build Count
     run: |
@@ -40,13 +42,14 @@ steps:
 
 ## Inputs
 
-| Input          | Description                                            | Required | Default |
-| -------------- | ------------------------------------------------------ | -------- | ------- |
-| `commit_sha`   | The SHA of the commit to find associated pull requests | Yes      | N/A     |
-| `github_token` | GitHub token for API authentication                    | Yes      | N/A     |
-| `owner`        | The owner of the repository                            | Yes      | N/A     |
-| `repo`         | The name of the repository                             | Yes      | N/A     |
-| `label`        | Filter pull requests by label name                     | No       | `''`    |
+| Input                  | Description                                                                                                                                                                   | Required | Default   |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
+| `commit_sha`           | The SHA of the commit to find associated pull requests                                                                                                                        | Yes      | N/A       |
+| `github_token`         | GitHub token for API authentication                                                                                                                                           | Yes      | N/A       |
+| `owner`                | The owner of the repository                                                                                                                                                   | Yes      | N/A       |
+| `repo`                 | The name of the repository                                                                                                                                                    | Yes      | N/A       |
+| `label`                | Filter pull requests by label name                                                                                                                                            | No       | `''`      |
+| `skip_merged_pr_check` | Skip checking if pull requests are merged. Default behavior is to filter out non-merged pull requests. Set to 'true' to process all pull requests regardless of merge status. | No       | `'false'` |
 
 ## Outputs
 

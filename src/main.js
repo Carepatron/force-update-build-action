@@ -8,11 +8,14 @@ export async function run() {
     const owner = core.getInput('owner')
     const repo = core.getInput('repo')
     const label = core.getInput('label')
+    const skipMergedPrCheck =
+      core.getInput('skip_merged_pr_check').toLowerCase() === 'true'
 
     core.debug(`Commit SHA: ${commitSha}`)
     core.debug(`Owner: ${owner}`)
     core.debug(`Repo: ${repo}`)
     core.debug(`Label: ${label}`)
+    core.debug(`Skip Merged PR Check: ${skipMergedPrCheck}`)
 
     const octokit = new Octokit({
       auth: githubToken
@@ -58,9 +61,15 @@ export async function run() {
           repo,
           commit_sha: commitSha
         })
+
       // Filter pull requests by label
       pullRequests = getPullRequestsResponse.data
-        .filter((pr) => !!pr.merged_at) // only merged pull requests
+        .filter((pr) => {
+          if (skipMergedPrCheck) {
+            return true // include all pull requests if skip check is enabled.
+          }
+          return !!pr.merged_at
+        }) // only include merged pull requests
         .filter((pr) => {
           if (pr.labels.length === 0) {
             return false

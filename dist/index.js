@@ -31038,39 +31038,50 @@ const Octokit = Octokit$1.plugin(requestLog, legacyRestEndpointMethods, paginate
 async function run() {
   try {
     const commitSha = coreExports.getInput('commit_sha');
-    const personalAccessToken = coreExports.getInput('personal_access_token');
+    const githubToken = coreExports.getInput('github_token');
     const owner = coreExports.getInput('owner');
     const repo = coreExports.getInput('repo');
     const label = coreExports.getInput('label');
-    const forceUpdateBuildCountName = coreExports.getInput(
-      'force_update_build_count_name'
-    );
+    const skipMergedPrCheck =
+      coreExports.getInput('skip_merged_pr_check').toLowerCase() === 'true';
 
     coreExports.debug(`Commit SHA: ${commitSha}`);
     coreExports.debug(`Owner: ${owner}`);
     coreExports.debug(`Repo: ${repo}`);
     coreExports.debug(`Label: ${label}`);
-    coreExports.debug(`Force Update Build Count Name: ${forceUpdateBuildCountName}`);
+    coreExports.debug(`Skip Merged PR Check: ${skipMergedPrCheck}`);
 
     const octokit = new Octokit({
-      auth: personalAccessToken
+      auth: githubToken
     });
 
-    coreExports.debug(
-      `Fetching repository variable with the name ${forceUpdateBuildCountName}...`
-    );
-    const getRepositoryVariableResponse =
-      await octokit.rest.actions.getRepoVariable({
-        owner,
-        repo,
-        name: forceUpdateBuildCountName
-      });
-    const forceUpdateBuildCount = getRepositoryVariableResponse.data.value;
+    coreExports.debug(`Fetching Carepatron Main App version.json...`);
 
-    if (!forceUpdateBuildCount) {
-      coreExports.setOutput('force_update_build_count', 0);
-      return
+    const versionJsonResponse = await fetch(
+      'https://app.carepatron.com/version.json',
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          Referer: 'https://app.carepatron.com/'
+        }
+      }
+    );
+
+    if (!versionJsonResponse.ok) {
+      throw new Error(
+        `Error fetching version.json. Status: ${versionJsonResponse.status}`
+      )
     }
+
+    const version = await versionJsonResponse.json();
+
+    const forceUpdateBuildCount =
+      typeof version.forceUpdateBuildCount === 'number'
+        ? version.forceUpdateBuildCount
+        : 0;
 
     // Make request to get pull requests associated with the commit
     coreExports.debug(`Fetching pull requests for commit ${commitSha}...`);
@@ -31084,9 +31095,15 @@ async function run() {
           repo,
           commit_sha: commitSha
         });
+
       // Filter pull requests by label
       pullRequests = getPullRequestsResponse.data
-        .filter((pr) => !!pr.merged_at) // only merged pull requests
+        .filter((pr) => {
+          if (skipMergedPrCheck) {
+            return true // include all pull requests if skip check is enabled.
+          }
+          return !!pr.merged_at
+        }) // only include merged pull requests
         .filter((pr) => {
           if (pr.labels.length === 0) {
             return false
@@ -31103,9 +31120,6 @@ async function run() {
     }
 
     coreExports.info(
-      `Force update build count: ${forceUpdateBuildCount} (from variable ${forceUpdateBuildCountName})`
-    );
-    coreExports.info(
       `Found ${pullRequests.length} pull requests associated with the commit`
     );
 
@@ -31115,23 +31129,7 @@ async function run() {
       return
     }
 
-    const latestForceUpdateBuildCount = (
-      parseInt(forceUpdateBuildCount) + 1
-    ).toString();
-
-    try {
-      // Update the force update build count variable
-      await octokit.rest.actions.updateRepoVariable({
-        owner,
-        repo,
-        name: forceUpdateBuildCountName,
-        value: latestForceUpdateBuildCount
-      });
-    } catch {
-      // If there's an error when patching the repository variable, set the `force_update_build_count` output to the current value.
-      coreExports.setOutput('force_update_build_count', forceUpdateBuildCount);
-      return
-    }
+    const latestForceUpdateBuildCount = forceUpdateBuildCount + 1;
 
     coreExports.setOutput('force_update_build_count', latestForceUpdateBuildCount);
   } catch (error) {

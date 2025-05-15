@@ -24,7 +24,13 @@ inputs:
   label:
     description: The label to filter pull requests by
     required: false
-    default: ''
+  skip_merged_pr_check:
+    description:
+      Skip checking if pull requests are merged. Default behavior is to filter
+      out non-merged pull requests. Set to 'true' to process all pull requests
+      regardless of merge status.
+    required: false
+    default: 'false'
 
 outputs:
   force_update_build_count:

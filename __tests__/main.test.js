@@ -50,7 +50,8 @@ const mockInputs = {
   github_token: 'token123',
   owner: 'carepatron',
   repo: 'test-repo',
-  label: 'force-update'
+  label: 'force-update',
+  skip_merged_pr_check: 'false'
 }
 
 const mockVersion = {
