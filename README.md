@@ -12,7 +12,7 @@ steps:
 
   - name: Force Update Build
     id: force-update
-    uses: carepatron/force-update-build-action@v1.1.0
+    uses: carepatron/force-update-build-action@v1.1.1
     with:
       commit_sha: ${{ github.sha }}
       personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
