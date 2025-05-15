@@ -1,6 +1,6 @@
 {
   "name": "force-update-build-action",
-  "description": "Increments force update build repository variable if associated pull request is a force update",
+  "description": "Increments force update build count if associated pull request is a force update",
   "version": "1.1.1",
   "author": "",
   "type": "module",
