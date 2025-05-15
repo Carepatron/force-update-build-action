@@ -44,21 +44,29 @@ jobs:
         id: npm-ci-test
         run: npm run ci-test
 
-  # test-action:
-  #   name: GitHub Actions Test
-  #   runs-on: ubuntu-latest
+  test-action:
+    name: GitHub Actions Test
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - name: Checkout
-  #       id: checkout
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
 
-  #     - name: Test Local Action
-  #       id: test-action
-  #       uses: ./
-  #       with:
-  #         milliseconds: 1000
+      - name: Test Local Action
+        id: test-action
+        uses: ./
+        with:
+          with:
+            commit_sha: ${{ github.sha }}
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            owner: ${{ github.repository_owner }}
+            repo: ${{ github.event.repository.name }}
+            # Optional: Filter PRs by label
+            label: 'force-update'
+            # Optional: Process all PRs regardless of merge status
+            # skip_merged_pr_check: 'true'
 
-  #     - name: Print Output
-  #       id: output
-  #       run: echo "${{ steps.test-action.outputs.time }}"
+      - name: Print Output
+        id: output
+        run: echo "${{ steps.test-action.outputs.force_update_build_count }}"
