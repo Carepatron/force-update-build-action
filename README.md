@@ -32,13 +32,14 @@ steps:
 ## How It Works
 
 1. The action fetches the current `forceUpdateBuildCount` from Carepatron Main
-   App's version.json file
-2. It fetches all pull requests associated with the specified commit
-3. It filters these pull requests for a specific label (e.g., 'force-update')
-4. If at least one labeled PR is found, it increments the force update build
-   count
-5. The updated counter value is provided as an output for use in subsequent
-   steps
+   App's version.json file.
+2. It fetches all pull requests associated with the specified commit.
+3. It filters only merged pull requests.
+4. It filters the pull requests for a specific label (e.g., 'force-update').
+5. If at least one labeled PR is found, it increments the force update build
+   count.
+6. The updated force update build count is provided as an output for use in
+   subsequent steps.
 
 ## Inputs
 
