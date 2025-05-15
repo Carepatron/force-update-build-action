@@ -62,7 +62,6 @@ jobs:
           owner: ${{ github.repository_owner }}
           repo: ${{ github.event.repository.name }}
           label: 'force-update'
-          skip_merged_pr_check: 'true'
 
       - name: Print Output
         id: output
