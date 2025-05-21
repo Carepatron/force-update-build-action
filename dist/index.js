@@ -31081,12 +31081,12 @@ async function run() {
 
     const version = await versionJsonResponse.json();
 
+    coreExports.info(`Version: ${JSON.stringify(version, null, 2)}`);
+
     const forceUpdateBuildCount =
       typeof version.forceUpdateBuildCount === 'number'
         ? version.forceUpdateBuildCount
         : 0;
-
-    coreExports.info(`Version: ${JSON.stringify(version, null, 2)}`);
 
     // Make request to get pull requests associated with the commit
     coreExports.debug(`Fetching pull requests for commit ${commitSha}...`);
