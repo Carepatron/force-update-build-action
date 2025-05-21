@@ -49,6 +49,8 @@ export async function run() {
         ? version.forceUpdateBuildCount
         : 0
 
+    core.info(`Version: ${JSON.stringify(version, null, 2)}`)
+
     // Make request to get pull requests associated with the commit
     core.debug(`Fetching pull requests for commit ${commitSha}...`)
 
@@ -96,6 +98,8 @@ export async function run() {
     }
 
     const latestForceUpdateBuildCount = forceUpdateBuildCount + 1
+
+    core.info(`Latest Force Update Build Count: ${latestForceUpdateBuildCount}`)
 
     core.setOutput('force_update_build_count', latestForceUpdateBuildCount)
   } catch (error) {
