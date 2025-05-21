@@ -44,6 +44,8 @@ export async function run() {
 
     const version = await versionJsonResponse.json()
 
+    core.info(`Version: ${JSON.stringify(version, null, 2)}`)
+
     const forceUpdateBuildCount =
       typeof version.forceUpdateBuildCount === 'number'
         ? version.forceUpdateBuildCount
@@ -96,6 +98,8 @@ export async function run() {
     }
 
     const latestForceUpdateBuildCount = forceUpdateBuildCount + 1
+
+    core.info(`Latest Force Update Build Count: ${latestForceUpdateBuildCount}`)
 
     core.setOutput('force_update_build_count', latestForceUpdateBuildCount)
   } catch (error) {
